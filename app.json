@@ -79,7 +79,8 @@
           "foregroundServiceType": "dataSync"
         }
       ],
-      "./withHealthConnectIntent.js"
+      "./withHealthConnectIntent.js",
+      "./withHealthConnectMainActivity.js"
     ],
     "experiments": {
       "typedRoutes": true,
