@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { HealthService } from '../services/HealthService';
+import api from '../services/api';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -13,17 +14,39 @@ export default function HomeScreen() {
       try {
         const hasPermissions = await HealthService.hasPermissions();
         if (!hasPermissions) {
-          console.log('[Home] Permissões não garantidas. Abortando execução silenciosamente.');
+          console.log('[Home] Permissões não garantidas. Abortando sync silenciosamente.');
           return;
         }
-        console.log('[Home] Permissões ok, monitoramento pronto.');
+
+        console.log('[Home] Permissões ok — iniciando sync imediato de saúde...');
+
+        // Sync imediato ao abrir o app: não espera o ciclo de 1h do background fetch
+        const token = await SecureStore.getItemAsync('jwt_token');
+        if (!token) {
+          console.log('[Home] Token não encontrado, pulando sync.');
+          return;
+        }
+
+        const rawData = await HealthService.extractDailyData();
+        const payload = HealthService.formatPayloadForBackend(rawData);
+
+        console.log(
+          `[Home] Sync imediato: passos=${payload.health_metrics_daily.steps}, ` +
+          `sono=${payload.health_metrics_daily.sleep_hours}h, ` +
+          `bpm=${payload.health_metrics_daily.bpm_avg}`
+        );
+
+        await api.post('/api/health-sync/', payload);
+        console.log('[Home] ✅ Sync imediato concluído com sucesso.');
       } catch (err) {
-        console.log('[Home] Erro ao verificar permissões', err);
+        // Falha silenciosa — não interrompe a experiência do usuário
+        console.log('[Home] Aviso: sync imediato falhou (não crítico):', err);
       }
-    }, 2000);
+    }, 3000); // Aguarda 3s para garantir que o layout já carregou
 
     return () => clearTimeout(timeoutId);
   }, []);
+
 
   const handleLogout = async () => {
     Alert.alert(
