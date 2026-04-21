@@ -9,7 +9,20 @@ export default function HomeScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    HealthService.requestHealthPermissions();
+    const timeoutId = setTimeout(async () => {
+      try {
+        const hasPermissions = await HealthService.hasPermissions();
+        if (!hasPermissions) {
+          console.log('[Home] Permissões não garantidas. Abortando execução silenciosamente.');
+          return;
+        }
+        console.log('[Home] Permissões ok, monitoramento pronto.');
+      } catch (err) {
+        console.log('[Home] Erro ao verificar permissões', err);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const handleLogout = async () => {

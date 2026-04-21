@@ -29,9 +29,9 @@ TaskManager.defineTask(MARCAO_HEALTH_SYNC, async () => {
     console.log(`[Background Sync] [${timestamp}] Sucesso: Dados enviados.`);
     return BackgroundFetch.BackgroundFetchResult.NewData;
   } catch (error: any) {
-    console.error('[Background Sync] Erro fatal durante a execução:', error);
-    // Retornamos Failed para que o OS possa tentar novamente mais tarde se desejar
-    return BackgroundFetch.BackgroundFetchResult.Failed;
+    console.log('[Background Sync] Erro capturado na blindagem (falta de permissão/crash evitado):', error);
+    // Retornamos Promise.resolve() para garantir que a task de background nunca dê crash global no app
+    return Promise.resolve();
   }
 });
 

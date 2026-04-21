@@ -1,6 +1,8 @@
 const { withAndroidManifest } = require('@expo/config-plugins');
 
-module.exports = function withAndroidForegroundService(config) {
+module.exports = function withAndroidForegroundService(config, props) {
+  const foregroundServiceType = props?.foregroundServiceType || 'dataSync';
+
   return withAndroidManifest(config, (config) => {
     const androidManifest = config.modResults.manifest;
     const mainApplication = androidManifest.application[0];
@@ -14,8 +16,8 @@ module.exports = function withAndroidForegroundService(config) {
           serviceName === 'expo.modules.taskmanager.TaskService' ||
           serviceName.includes('BackgroundFetch')
         ) {
-          console.log(`[Plugin] Atribuindo foregroundServiceType a: ${serviceName}`);
-          service.$['android:foregroundServiceType'] = 'dataSync|health';
+          console.log(`[Plugin] Atribuindo foregroundServiceType (${foregroundServiceType}) a: ${serviceName}`);
+          service.$['android:foregroundServiceType'] = foregroundServiceType;
         }
       });
     }

@@ -5,7 +5,15 @@ import { registerBackgroundSync } from '../services/BackgroundSync';
 
 export default function RootLayout() {
   useEffect(() => {
-    registerBackgroundSync();
+    const syncTimeout = setTimeout(() => {
+      try {
+        registerBackgroundSync();
+      } catch (err) {
+        console.error("Failed to register background sync", err);
+      }
+    }, 4000);
+
+    return () => clearTimeout(syncTimeout);
   }, []);
 
   return (

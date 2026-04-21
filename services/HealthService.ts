@@ -4,9 +4,25 @@ import {
   initialize,
   requestPermission,
   readRecords,
+  getGrantedPermissions,
 } from 'react-native-health-connect';
 
 export class HealthService {
+  static async hasPermissions(): Promise<boolean> {
+    if (Platform.OS === 'android') {
+      try {
+        await initialize();
+        const grantedPermissions = await getGrantedPermissions();
+        return grantedPermissions && grantedPermissions.length > 0;
+      } catch (error) {
+        console.log('[HealthService] Erro ao verificar permissões:', error);
+        return false;
+      }
+    }
+    // Para iOS, delegamos a checagem ou assumimos true se a auth já rodou
+    return false;
+  }
+
   static async requestHealthPermissions(): Promise<boolean> {
     if (Platform.OS === 'android') {
       try {

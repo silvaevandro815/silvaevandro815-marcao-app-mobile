@@ -23,9 +23,15 @@ export default function LoginScreen() {
           console.log("Nenhum token encontrado, permanecendo no Login.");
         }
       } catch (error) {
-        // Se houver qualquer erro no SecureStore ou no roteamento, garantimos que o app não trave
+        // Se houver qualquer erro no SecureStore (ex: descriptografia corrompida no Android 14)
         console.error("ERRO CRÍTICO na leitura do SecureStore:", error);
-        // Em caso de erro, garantimos que o estado checkingSession mude para permitir que o usuário faça login novamente
+        
+        // Fallback silencioso: apaga manualmente o item e permanece na tela de login
+        try {
+          await SecureStore.deleteItemAsync('jwt_token');
+        } catch (e) {
+          console.error("Falha ao limpar SecureStore corrompido.", e);
+        }
       } finally {
         setCheckingSession(false);
       }
