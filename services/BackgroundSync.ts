@@ -17,21 +17,29 @@ TaskManager.defineTask(MARCAO_HEALTH_SYNC, async () => {
       return BackgroundFetch.BackgroundFetchResult.NoData;
     }
 
-    const data = await HealthService.extractDailyData();
+    // 1. Extrai os dados brutos do Health Connect / HealthKit
+    const rawData = await HealthService.extractDailyData();
 
-    await api.post('/api/health-sync', data, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    // 2. Formata o payload no formato esperado pelo backend (/api/health-sync/)
+    //    CORREÇÃO CRÍTICA: inclui sleep_hours calculado via Interval Union
+    const formattedPayload = HealthService.formatPayloadForBackend(rawData);
+
+    console.log(
+      `[Background Sync] Payload formatado: passos=${formattedPayload.health_metrics_daily.steps}, ` +
+      `sono=${formattedPayload.health_metrics_daily.sleep_hours}h, ` +
+      `bpm=${formattedPayload.health_metrics_daily.bpm_avg}, ` +
+      `treinos=${formattedPayload.workout_sessions.length}`
+    );
+
+    // 3. Envia ao backend com autenticação JWT
+    await api.post('/api/health-sync/', formattedPayload);
     
     const timestamp = new Date().toLocaleTimeString();
-    console.log(`[Background Sync] [${timestamp}] Sucesso: Dados enviados.`);
+    console.log(`[Background Sync] [${timestamp}] Sucesso: Dados enviados ao Marcão.`);
     return BackgroundFetch.BackgroundFetchResult.NewData;
   } catch (error: any) {
-    console.log('[Background Sync] Erro capturado na blindagem (falta de permissão/crash evitado):', error);
-    // Retornamos Promise.resolve() para garantir que a task de background nunca dê crash global no app
-    return Promise.resolve();
+    console.log('[Background Sync] Erro capturado (evitando crash global):', error?.message || error);
+    return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });
 
@@ -40,15 +48,15 @@ export async function registerBackgroundSync() {
     const isRegistered = await TaskManager.isTaskRegisteredAsync(MARCAO_HEALTH_SYNC);
     if (!isRegistered) {
       await BackgroundFetch.registerTaskAsync(MARCAO_HEALTH_SYNC, {
-        minimumInterval: 60 * 60, // 1 hora em segundos (conforme solicitado pelo usuário)
-        stopOnTerminate: false, // Continue rodando se o app for fechado
-        startOnBoot: true, // Iniciar quando o celular reiniciar
+        minimumInterval: 60 * 60, // 1 hora em segundos
+        stopOnTerminate: false,   // Continua rodando quando o app é fechado
+        startOnBoot: true,        // Reinicia quando o celular liga
       });
-      console.log('Background Sync task registered (1h interval)!');
+      console.log('[Background Sync] Task registrada com sucesso (intervalo: 1h).');
     } else {
-      console.log('Background Sync already registered.');
+      console.log('[Background Sync] Task já registrada.');
     }
   } catch (err) {
-    console.error('Background Sync registration failed:', err);
+    console.error('[Background Sync] Falha ao registrar task:', err);
   }
 }
